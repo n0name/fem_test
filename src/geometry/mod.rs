@@ -1,7 +1,7 @@
 pub mod ray2d;
 pub use self::ray2d::Ray2D;
 
-use super::base_types::*;
+pub use super::base_types::*;
 
 pub enum GeometryObject {
     Segment { beg: Vec2, end: Vec2 },
@@ -36,7 +36,7 @@ impl GeometryObject  {
                          center.1 + radius,
                          center.0 + radius];
                 circle_arc(color, 1.0,
-                           *start, start + sweep,
+                           start - sweep, *start,
                            r, transform, g)
             },
         }
