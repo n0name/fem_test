@@ -5,3 +5,5 @@ authors = ["Nikola Georgiev <georgiev.nikito@gmail.com>"]
 
 [dependencies]
 piston_window = "*"
+dxf = "*"
+itertools = "*"
