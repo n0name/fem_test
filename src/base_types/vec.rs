@@ -1,20 +1,28 @@
 use std::ops::{Add, Mul, Sub, Div};
 use std::ops::{AddAssign, MulAssign, SubAssign, DivAssign};
+use super::traits::*;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Vec2(f64, f64);
+pub struct Vec2(pub f64, pub f64);
 #[derive(Debug, PartialEq, Clone)]
-pub struct Vec3(f64, f64, f64);
+pub struct Vec3(pub f64, pub f64, pub f64);
 
-impl Vec2 {
-    pub fn dot(&self, other: &Vec2) -> f64 {
+impl Dot for Vec2 {
+    type Output = f64;
+    fn dot(&self, other: &Vec2) -> f64 {
         self.0 * other.0 + self.1 * other.1
     }
+}
 
-    pub fn cross(&self, other: &Vec2) -> f64 {
+impl Cross for Vec2 {
+    type Output = f64;
+    fn cross(&self, other: &Vec2) -> f64 {
         self.0 * other.1 - self.1 * other.0
     }
+}
 
+#[allow(dead_code)]
+impl Vec2 {
     pub fn length(&self) -> f64 { self.dot(self) }
 
     pub fn normalized(&self) -> Vec2 {
@@ -26,16 +34,24 @@ impl Vec2 {
     }
 }
 
-impl Vec3 {
-    pub fn dot(&self, other: &Vec3) -> f64 {
+impl Dot for Vec3 {
+    type Output = f64;
+    fn dot(&self, other: &Vec3) -> f64 {
         self.0 * other.0 + self.1 * other.1 + self.2 * other.2
     }
+}
 
-    pub fn cross(&self, other: &Vec3) -> Vec3 {
+impl Cross for Vec3 {
+    type Output = Vec3;
+    fn cross(&self, other: &Vec3) -> Vec3 {
         Vec3( self.1 * other.2 - self.2 * other.1, 
             self.2 * other.0 - self.0 * other.2,
             self.0 * other.1 - self.1 * other.0 )
     }
+}
+
+#[allow(dead_code)]
+impl Vec3 {
 
     pub fn length(&self) -> f64 { self.dot(self) }
 
