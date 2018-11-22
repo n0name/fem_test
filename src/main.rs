@@ -26,6 +26,11 @@ mod drawing {
 
         pub fn draw<G: Graphics>(&self, transform: math::Matrix2d, g: &mut G) {
             self.objects.iter().for_each(|o| o.draw(transform, g));
+
+            // let bb_rect = rectangle::Rectangle::new_border([1.0, 1.0, 0.0, 0.5], 0.5);
+            // let temp = self.calc_bounding_box();
+            // bb_rect.draw([temp.l, temp.t, temp.width(), temp.height()],  
+            //     &draw_state::DrawState::new_alpha(), transform, g);
         }
 
         pub fn calc_bounding_box(&self) -> BoundingBox {
@@ -66,10 +71,6 @@ impl Camera {
 
     fn zoom_to_fit(&mut self, drw: &Drawing) {
         let mut bounding_box = drw.calc_bounding_box();
-        println!("Boundign Box: {:?}", bounding_box);
-        println!("BB Center: {:?}", bounding_box.center());
-        let old_scale = self.scale;
-
         self.scale = {
             let side = bounding_box.width().max(bounding_box.height());
             1000.0 / side
@@ -77,13 +78,13 @@ impl Camera {
 
         self.pos = Vec2( -bounding_box.l, -bounding_box.t);
         bounding_box.scale(self.scale);
-        self.pos += self.pixel_size.clone() - bounding_box.size();
+        self.pos += (self.pixel_size.clone() - bounding_box.size()) / 2.0;
     }
 }
 
 fn main() {
 
-    let file_name = Path::new(r#"D:\Temp\fishiiii.dxf"#);
+    let file_name = Path::new(r#"D:\Temp\asdrcs.dxf"#);
     let objects = GeometryObject::read_from_file(file_name)
         .expect("Could not parse file");
     let drw = Drawing::from_obs(objects);
@@ -92,13 +93,15 @@ fn main() {
         WindowSettings::new("Finite Elements", [1000, 1000])
             .exit_on_esc(true).build().expect("Failed to create Window");
 
+
+    window.set_lazy(true);
     let mut camera = Camera::new((f64::from(1000), f64::from(1000)), 3.0);
 
-    println!("Before zf: {:?}", camera);
+    // println!("Before zf: {:?}", camera);
 
     camera.zoom_to_fit(&drw);
 
-    println!("After zf: {:?}", camera);
+    // println!("After zf: {:?}", camera);
 
     while let Some(event) = window.next() {
         match event {
@@ -125,11 +128,12 @@ fn main() {
                         .scale(camera.scale, camera.scale)
                         .trans(camera.pos.0, camera.pos.1);
                     drw.draw(tr, graphics);
+                    println!("======================");
                 });
             }
 
         }
     }
 
-    println!("End: {:?}", camera);
+    // println!("End: {:?}", camera);
 }

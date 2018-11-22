@@ -23,6 +23,18 @@ impl Cross for Vec2 {
 
 #[allow(dead_code)]
 impl Vec2 {
+    pub fn from_angle(angle: f64) -> Vec2 {
+        Vec2(angle.cos(), angle.sin())
+    }
+
+    pub fn ox() -> Vec2 {
+        Vec2(1.0, 0.0)
+    }
+
+    pub fn oy() -> Vec2 {
+        Vec2(0.0, 1.0)
+    }
+
     pub fn length(&self) -> f64 { self.dot(self) }
 
     pub fn normalized(&self) -> Vec2 {

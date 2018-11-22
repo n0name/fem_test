@@ -99,9 +99,27 @@ impl GeometryObject  {
                 let r = [center.0 - radius,
                          center.1 - radius,
                          2.0 * radius, 2.0 * radius];
-                circle_arc(color, 1.0,
+
+
+                let clr = if *sweep > 0.0 { 
+                    [0.2, 1.0, 0.8, 1.0]
+                } else {
+                    [0.8, 1.0, 0.2, 1.0]
+                };
+
+                circle_arc(clr, 1.0,
                            *start, start + sweep,
-                           r, transform, g)
+                           r, transform, g);
+
+                let bb_rect = rectangle::Rectangle::new_border([1.0, 0.0, 0.0, 1.0], 1.0);
+                let temp = self.bounding_box();
+                bb_rect.draw([temp.l, temp.t, temp.width(), temp.height()],  
+                    &draw_state::DrawState::new_alpha(), transform, g);
+
+                let beg = Vec2::from_angle(*start) * (*radius) + center.clone();
+                let circ = ellipse::Ellipse::new_border([1.0, 0.0, 1.0, 1.0], 1.0);
+                circ.draw([beg.0 - 1.0, beg.1 - 1.0, 2.0, 2.0]
+                    , &draw_state::DrawState::new_alpha(), transform, g)
             },
             GeometryObject::PolyLine {points} => {
                 points.iter().tuple_windows::<(_, _)>()
@@ -124,9 +142,71 @@ impl GeometryObject  {
                 bb += &Vec2(center.0 - radius, center.1 - radius);
                 bb += &Vec2(center.0 + radius, center.1 + radius);
             },
-            GeometryObject::Arc{ center, radius, start: _, sweep: _ } => {
-                bb += &Vec2(center.0 - radius, center.1 - radius);
-                bb += &Vec2(center.0 + radius, center.1 + radius);
+            GeometryObject::Arc{ center, radius, start, sweep } => {
+                
+                let r = *radius;
+
+                let beg = Vec2::from_angle(*start);
+                let end = Vec2::from_angle(start + sweep);
+                let ox = Vec2::ox();
+                let oy = Vec2::oy();
+
+                bb += &(center.clone() + beg.clone() * r);
+                bb += &(center.clone() + end.clone() * r);
+
+                // let pi_2 = f64::consts::PI / 2.0;
+                let two_pi = 2.0 * f64::consts::PI;
+
+
+                let tmp_sweep = beg.dot(&end).acos().round().to_degrees() as i32;
+
+                // let tmp_sweep = if *sweep < 0.0 {
+                //     (two_pi + *sweep).to_degrees() as i32
+                // } else {
+                //     sweep.to_degrees() as i32
+                // };
+
+                let tmp_start = if *start < 0.0 {
+                    (two_pi + *start).to_degrees() as i32
+                } else {
+                    start.to_degrees() as i32
+                };
+
+                let cnt = tmp_sweep / 90;
+                let idx  =  tmp_start / 90;
+
+                println!("{:?}. {:?}", tmp_start, tmp_sweep);
+                println!("{:?}: {:?}, {:?}", center, idx, cnt);
+                for i in 0..cnt {
+                    match (idx + i) % 4 {
+                        0 => {bb.r = center.0 + radius },
+                        1 => {bb.t = center.1 - radius },
+                        2 => {bb.l = center.0 - radius },
+                        3 => {bb.b = center.1 + radius },
+                        _ => {println!("Holy Shit !!")}
+                    }
+                }
+
+
+                // let beg_ox = beg.dot(&ox);
+                // let beg_oy = beg.dot(&oy);
+                // let end_ox = end.dot(&ox);
+                // let end_oy = end.dot(&oy);
+
+                // if beg_ox > 0.0 && end_ox > 0.0 {
+                //     bb.l = center.0 - radius;
+                // } else if beg_ox < 0.0 && end_ox < 0.0 {
+                //     bb.r = center.0 + radius;
+                // } else {
+                //     if beg_oy > 0.0 && end_oy > 0.0 {
+                //         bb.b = center.1 + radius;
+                //     } else if beg_oy < 0.0 && end_oy < 0.0 {
+                //         bb.t = center.1 - radius;
+                //     } else {
+                //         bb += &Vec2(center.0 - radius, center.1 - radius);
+                //         bb += &Vec2(center.0 + radius, center.1 + radius);
+                //     }
+                // }
             }
             GeometryObject::PolyLine{ points } => {
                 points.iter().for_each(|p| bb+= p);
