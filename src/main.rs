@@ -27,6 +27,12 @@ mod drawing {
         pub fn draw<G: Graphics>(&self, transform: math::Matrix2d, g: &mut G) {
             self.objects.iter().for_each(|o| o.draw(transform, g));
         }
+
+        pub fn calc_bounding_box(&self) -> BoundingBox {
+            self.objects.iter()
+                .map(|o| o.bounding_box())
+                .fold(BoundingBox::null(), |res, cur| res + cur)
+        }
     }
 }
 
@@ -39,15 +45,45 @@ use drawing::*;
 
 use std::path::Path;
 
+#[derive(Debug)]
 struct Camera {
     pos: Vec2,
     scale: f64,
-    speed: f64
+    speed: f64,
+    pixel_size: Vec2
+}
+
+impl Camera {
+    pub fn new(pixel_size: (f64, f64), speed: f64) -> Camera {
+        Camera { pos: Vec2(0.0, 0.0), scale: 1.0, speed, 
+        pixel_size: Vec2(pixel_size.0, pixel_size.1)}
+    }
+
+    pub fn center(&self, scale: f64) -> Vec2 {
+        (self.pixel_size.clone() * scale) / 2.0 + self.pos.clone()
+    }
+
+
+    fn zoom_to_fit(&mut self, drw: &Drawing) {
+        let mut bounding_box = drw.calc_bounding_box();
+        println!("Boundign Box: {:?}", bounding_box);
+        println!("BB Center: {:?}", bounding_box.center());
+        let old_scale = self.scale;
+
+        self.scale = {
+            let side = bounding_box.width().max(bounding_box.height());
+            1000.0 / side
+        };
+
+        self.pos = Vec2( -bounding_box.l, -bounding_box.t);
+        bounding_box.scale(self.scale);
+        self.pos += self.pixel_size.clone() - bounding_box.size();
+    }
 }
 
 fn main() {
 
-    let file_name = Path::new(r#"D:\Temp\Gear Sample-iss4\Gear Sample-iss4.DXF"#);
+    let file_name = Path::new(r#"D:\Temp\fishiiii.dxf"#);
     let objects = GeometryObject::read_from_file(file_name)
         .expect("Could not parse file");
     let drw = Drawing::from_obs(objects);
@@ -56,10 +92,15 @@ fn main() {
         WindowSettings::new("Finite Elements", [1000, 1000])
             .exit_on_esc(true).build().expect("Failed to create Window");
 
-    let mut camera = Camera{ pos: Vec2(0.0, 0.0), scale: 1.0, speed: 3.0 };
+    let mut camera = Camera::new((f64::from(1000), f64::from(1000)), 3.0);
+
+    println!("Before zf: {:?}", camera);
+
+    camera.zoom_to_fit(&drw);
+
+    println!("After zf: {:?}", camera);
 
     while let Some(event) = window.next() {
-
         match event {
             Event::Input(input) => {
                 if let Input::Button(btn) = input {
@@ -69,8 +110,9 @@ fn main() {
                             Key::A => { camera.pos += Vec2(-1.0, 0.0) * camera.speed },
                             Key::S => { camera.pos += Vec2(0.0, 1.0) * camera.speed },
                             Key::D => { camera.pos += Vec2(1.0, 0.0) * camera.speed },
-                            Key::U => { camera.scale *= 1.1 },
-                            Key::J => { camera.scale /= 0.9 },
+                            Key::U => { camera.scale *= 1.1; camera.speed += 2.0 },
+                            Key::J => { camera.scale *= 0.9; camera.speed -= 2.0 },
+                            Key::F4 => {camera.zoom_to_fit(&drw)}
                             _ => ()
                         }
                     }
@@ -80,13 +122,14 @@ fn main() {
                 window.draw_2d(&event, |context, graphics| {
                     clear([0.1; 4], graphics);
                     let tr = context.transform
-                        .trans(camera.pos.0, camera.pos.1)
-                        .scale(camera.scale, camera.scale);
+                        .scale(camera.scale, camera.scale)
+                        .trans(camera.pos.0, camera.pos.1);
                     drw.draw(tr, graphics);
                 });
             }
 
         }
-
     }
+
+    println!("End: {:?}", camera);
 }

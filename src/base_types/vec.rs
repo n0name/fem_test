@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Sub, Div};
+use std::ops::{Add, Mul, Sub, Div, Neg};
 use std::ops::{AddAssign, MulAssign, SubAssign, DivAssign};
 use super::traits::*;
 
@@ -163,6 +163,16 @@ op_vec3_as!(AddAssign, add_assign, +);
 op_vec3_as!(MulAssign, mul_assign, *);
 op_vec3_as!(SubAssign, sub_assign, -);
 op_vec3_as!(DivAssign, div_assign, /);
+
+impl Neg for Vec2 {
+    type Output = Vec2;
+    fn neg(self) -> Vec2 { Vec2(-self.0, -self.1) }
+}
+
+impl Neg for Vec3 {
+    type Output = Vec3;
+    fn neg(self) -> Vec3 { Vec3(-self.0, -self.1, -self.2) }
+}
 
 #[cfg(test)]
 mod test {

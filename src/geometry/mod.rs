@@ -1,10 +1,14 @@
 pub mod ray2d;
+pub mod bounding_box;
+
+pub use base_types::*;
 pub use self::ray2d::Ray2D;
-pub use super::base_types::*;
+pub use self::bounding_box::*;
 
 use std::f64;
 use std::path::Path;
 use piston_window::*;
+
 
 use dxf::Drawing;
 use dxf::entities::*;
@@ -18,13 +22,13 @@ pub enum GeometryObject {
     PolyLine { points: Vec<Vec2> }
 }
 
-impl From<&dxf::Point> for Vec2 {
+impl<'a> From<&'a dxf::Point> for Vec2 {
     fn from(p: &dxf::Point) -> Self {
         Vec2(p.x, p.y)
     }
 }
 
-impl From<&dxf::Point> for Vec3 {
+impl<'a> From<&'a dxf::Point> for Vec3 {
     fn from(p: &dxf::Point) -> Self {
         Vec3(p.x, p.y, p.z)
     }
@@ -34,6 +38,7 @@ trait OptionalFrom<T> {
     type Output;
     fn from_op(_: &T) -> Option<Self::Output>;
 }
+
 
 impl OptionalFrom<Entity> for GeometryObject {
     type Output = Self;
@@ -55,8 +60,8 @@ impl OptionalFrom<Entity> for GeometryObject {
                 Some(GeometryObject::Arc {
                     center: Vec2::from(&arc.center),
                     radius: arc.radius,
-                    start: arc.start_angle,
-                    sweep: arc.end_angle - arc.start_angle
+                    start: arc.start_angle.to_radians(),
+                    sweep: (arc.end_angle - arc.start_angle).to_radians()
                 })
             },
             EntityType::Polyline(ref polyline) => {
@@ -85,8 +90,7 @@ impl GeometryObject  {
             GeometryObject::Circle{center, radius} => {
                 let r = [center.0 - radius,
                          center.1 - radius,
-                         center.1 + radius,
-                         center.0 + radius];
+                         2.0 * radius, 2.0 * radius];
 
                 let circ = ellipse::Ellipse::new_border(color, 1.0);
                 circ.draw(r, &draw_state::DrawState::new_alpha(), transform, g)
@@ -94,10 +98,9 @@ impl GeometryObject  {
             GeometryObject::Arc{center, radius, start, sweep} => {
                 let r = [center.0 - radius,
                          center.1 - radius,
-                         center.1 + radius,
-                         center.0 + radius];
+                         2.0 * radius, 2.0 * radius];
                 circle_arc(color, 1.0,
-                           start - sweep, *start,
+                           *start, start + sweep,
                            r, transform, g)
             },
             GeometryObject::PolyLine {points} => {
@@ -109,6 +112,27 @@ impl GeometryObject  {
                     });
             }
         }
+    }
+
+    pub fn bounding_box(&self) -> BoundingBox {
+        let mut bb = BoundingBox::null();
+        match self {
+            GeometryObject::Segment{ beg, end } => {
+                bb += beg; bb += end;
+            },
+            GeometryObject::Circle{ center, radius } => {
+                bb += &Vec2(center.0 - radius, center.1 - radius);
+                bb += &Vec2(center.0 + radius, center.1 + radius);
+            },
+            GeometryObject::Arc{ center, radius, start: _, sweep: _ } => {
+                bb += &Vec2(center.0 - radius, center.1 - radius);
+                bb += &Vec2(center.0 + radius, center.1 + radius);
+            }
+            GeometryObject::PolyLine{ points } => {
+                points.iter().for_each(|p| bb+= p);
+            }
+        }
+        return bb;
     }
 
     pub fn read_from_file(file_name: &Path) -> Result<Vec<GeometryObject>, String> {
